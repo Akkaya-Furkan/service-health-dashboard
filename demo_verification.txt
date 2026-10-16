@@ -1,0 +1,59 @@
+### GET /health
+HTTP/1.1 200 OK
+date: Fri, 16 Oct 2026 13:38:55 GMT
+server: uvicorn
+content-length: 78
+content-type: application/json
+
+{"status":"ok","version":"0.1.0","demo":true,"targets":4,"stored_checks":1164}
+### GET /api/services
+HTTP/1.1 200 OK
+date: Fri, 16 Oct 2026 13:38:55 GMT
+server: uvicorn
+content-length: 1138
+content-type: application/json
+
+{"demo":true,"count":6,"containers":[{"id":"demo00000000","name":"nextcloud","image":"nextcloud:29","state":"running","status":"Up 3 days","cpu_percent":2.96,"memory_bytes":329814411,"memory_limit_bytes":2147483648},{"id":"demo00000001","name":"nextcloud-db","image":"postgres:16","state":"running","status":"Up 3 days","cpu_percent":1.41,"memory_bytes":197829240,"memory_limit_bytes":2147483648},{"id":"demo00000002","name":"jellyfin","image":"jellyfin/jellyfin:10","state":"running","status":"Up 3 days","cpu_percent":6.45,"memory_bytes":674422624,"memory_limit_bytes":2147483648},{"id":"demo00000003","name":"grafana","image":"grafana/grafana:11","state":"running","status":"Up 3 days","cpu_percent":0.64,"memory_bytes":145664818,"memory_limit_bytes":2147483648},{"id":"demo00000004","name":"pihole","image":"pihole/pihole:2024","state":"running","status":"Up 3 days","cpu_percent":0.21,"memory_bytes":70042462,"memory_limit_bytes":2147483648},{"id":"demo00000005","name":"old-backup-job","image":"restic/restic:0.17","state":"exited","status":"Exited (0) 2 days ago","cpu_percent":null,"memory_bytes":null,"memory_limit_bytes":null}]}
+### GET /api/uptime?limit=2
+HTTP/1.1 200 OK
+date: Fri, 16 Oct 2026 13:38:55 GMT
+server: uvicorn
+content-length: 1999
+content-type: application/json
+
+{"demo":true,"window_hours":24,"targets":[{"target":"nextcloud","url":"http://demo.invalid/nextcloud","last":{"target":"nextcloud","checked_at":1792157934,"ok":true,"status_code":200,"response_ms":152.7,"error":null},"summary":{"checks":290,"uptime_percent":95.86,"avg_response_ms":190.1,"max_response_ms":292.2},"history":[{"target":"nextcloud","checked_at":1792157932,"ok":true,"status_code":200,"response_ms":165.5,"error":null},{"target":"nextcloud","checked_at":1792157934,"ok":true,"status_code":200,"response_ms":152.7,"error":null}]},{"target":"jellyfin","url":"http://demo.invalid/jellyfin","last":{"target":"jellyfin","checked_at":1792157934,"ok":true,"status_code":200,"response_ms":72.3,"error":null},"summary":{"checks":290,"uptime_percent":99.31,"avg_response_ms":94.5,"max_response_ms":144.7},"history":[{"target":"jellyfin","checked_at":1792157932,"ok":true,"status_code":200,"response_ms":60.6,"error":null},{"target":"jellyfin","checked_at":1792157934,"ok":true,"status_code":200,"response_ms":72.3,"error":null}]},{"target":"grafana","url":"http://demo.invalid/grafana","last":{"target":"grafana","checked_at":1792157934,"ok":true,"status_code":200,"response_ms":53.5,"error":null},"summary":{"checks":290,"uptime_percent":99.31,"avg_response_ms":62.4,"m
+### GET /metrics
+HTTP/1.1 200 OK
+date: Fri, 16 Oct 2026 13:38:55 GMT
+server: uvicorn
+content-length: 1593
+content-type: text/plain; version=1.0.0; charset=utf-8
+
+# HELP shd_target_up 1 if last HTTP check succeeded
+# TYPE shd_target_up gauge
+shd_target_up{target="nextcloud"} 1.0
+shd_target_up{target="jellyfin"} 1.0
+shd_target_up{target="grafana"} 1.0
+shd_target_up{target="pihole"} 1.0
+# HELP shd_target_response_ms Last HTTP response time in ms
+# TYPE shd_target_response_ms gauge
+shd_target_response_ms{target="nextcloud"} 152.7
+shd_target_response_ms{target="jellyfin"} 72.3
+shd_target_response_ms{target="grafana"} 53.5
+shd_target_response_ms{target="pihole"} 19.3
+# HELP shd_container_running 1 if container is running
+# TYPE shd_container_running gauge
+shd_container_running{name="nextcloud"} 1.0
+shd_container_running{name="nextcloud-db"} 1.0
+shd_container_running{name="jellyfin"} 1.0
+shd_container_running{name="grafana"} 1.0
+shd_container_running{name="pihole"} 1.0
+shd_container_running{name="old-backup-job"} 0.0
+# HELP shd_container_cpu_percent Container CPU percent
+# TYPE shd_container_cpu_percent gauge
+shd_container_cpu_percent{name="nextcloud"} 2.96
+shd_container_cpu_percent{name="nextcloud-db"} 1.41
+shd_container_cpu_percent{name="jellyfin"} 6.44
+shd_container_cpu_percent{name="grafana"} 0.64
+shd_container_cpu_percent{name="pihole"} 0.21
+# HELP shd_container_memory_bytes Container memor

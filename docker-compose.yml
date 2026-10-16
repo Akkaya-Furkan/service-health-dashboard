@@ -1,0 +1,38 @@
+# Not deployed anywhere by this repo. Use SHD_DEMO=1 to avoid touching any real Docker.
+services:
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1   # GET /containers/* (list, inspect, stats)
+      POST: 0         # no write methods
+      IMAGES: 0
+      NETWORKS: 0
+      VOLUMES: 0
+      EXEC: 0
+      INFO: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [internal]
+
+  shd:
+    build: .
+    restart: unless-stopped
+    depends_on: [docker-socket-proxy]
+    environment:
+      SHD_DOCKER_HOST: tcp://docker-socket-proxy:2375
+      SHD_TARGETS: ${SHD_TARGETS:-}
+      SHD_INTERVAL: 30
+      SHD_DEMO: ${SHD_DEMO:-0}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - shd-data:/data
+    networks: [internal, default]
+
+networks:
+  internal:
+    internal: true
+
+volumes:
+  shd-data:
