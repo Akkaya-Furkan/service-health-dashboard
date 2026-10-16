@@ -1,0 +1,20 @@
+{% if not rows %}
+<p class="empty">No HTTP targets configured. Set <code>SHD_TARGETS</code> (or run with <code>--demo</code>).</p>
+{% endif %}
+{% for r in rows %}
+{% set last = r.last %}
+<article class="card {{ 'ok' if last and last.ok else 'bad' if last else 'off' }}">
+  <h3>{{ r.target.name }} <span class="pill">{{ 'up' if last and last.ok else 'down' if last else 'no data' }}</span></h3>
+  <p class="sub">{{ r.target.url }}</p>
+  <div class="bar" role="img" aria-label="uptime history">{% for c in r.bar %}<i class="{{ c }}"></i>{% endfor %}</div>
+  {% if r.spark %}
+  <svg class="spark" viewBox="0 0 240 40" preserveAspectRatio="none" role="img" aria-label="response time"><polyline points="{{ r.spark }}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+  {% endif %}
+  <p class="stats">
+    {{ r.summary.uptime_percent if r.summary.uptime_percent is not none else '–' }}% up ·
+    avg {{ r.summary.avg_response_ms if r.summary.avg_response_ms is not none else '–' }} ms ·
+    last {{ last.response_ms if last and last.response_ms is not none else '–' }} ms
+    {% if last and last.error %}· <span class="err">{{ last.error }}</span>{% endif %}
+  </p>
+</article>
+{% endfor %}

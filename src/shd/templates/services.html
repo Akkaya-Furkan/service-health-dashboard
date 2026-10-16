@@ -1,0 +1,17 @@
+{% if error %}
+<p class="error" role="alert">{{ error }}</p>
+{% elif not containers %}
+<p class="empty">No containers reported.</p>
+{% endif %}
+{% for c in containers %}
+<article class="card {{ 'ok' if c.state == 'running' else 'off' }}">
+  <h3>{{ c.name }} <span class="pill">{{ c.state }}</span></h3>
+  <p class="sub">{{ c.image }} · {{ c.status }}</p>
+  {% if c.state == 'running' %}
+  <div class="metric"><span>CPU</span>
+    <meter min="0" max="100" value="{{ c.cpu_percent or 0 }}"></meter><b>{{ '%.1f'|format(c.cpu_percent) if c.cpu_percent is not none else '–' }}%</b></div>
+  <div class="metric"><span>Mem</span>
+    <meter min="0" max="{{ c.memory_limit_bytes or c.memory_bytes or 1 }}" value="{{ c.memory_bytes or 0 }}"></meter><b>{{ c.memory_bytes|bytes }}</b></div>
+  {% endif %}
+</article>
+{% endfor %}

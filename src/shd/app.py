@@ -3,7 +3,11 @@ from __future__ import annotations
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Response
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from . import __version__
 from .checker import Checker
@@ -12,6 +16,9 @@ from .demo import DEMO_TARGETS, DemoSource, SyntheticProbe, backfill
 from .docker_client import ContainerSource, DockerProxySource, NullSource
 from .metrics import Metrics
 from .store import Store
+from .ui import fmt_bytes, spark_points, uptime_bar
+
+HERE = Path(__file__).parent
 
 
 def create_app(settings: Settings, source: ContainerSource | None = None,
@@ -81,5 +88,38 @@ def create_app(settings: Settings, source: ContainerSource | None = None,
     def prom():
         body, ctype = metrics.render()
         return Response(body, media_type=ctype)
+
+    templates = Jinja2Templates(directory=str(HERE / "templates"))
+    templates.env.filters["bytes"] = fmt_bytes
+    app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
+
+    def _containers():
+        try:
+            return source.list_containers(), None
+        except Exception as e:
+            return [], f"container source unavailable ({type(e).__name__})"
+
+    def _targets(hours=24):
+        since = int(time.time()) - hours * 3600
+        rows = []
+        for t in targets:
+            hist = store.history(t.name, since, 288)
+            rows.append({"target": t, "last": store.latest(t.name),
+                         "summary": store.summary(t.name, since),
+                         "spark": spark_points(hist), "bar": uptime_bar(hist)})
+        return rows
+
+    @app.get("/", include_in_schema=False)
+    def index(request: Request):
+        return templates.TemplateResponse(request, "index.html", {"demo": settings.demo, "version": __version__})
+
+    @app.get("/ui/services", include_in_schema=False)
+    def ui_services(request: Request):
+        cs, err = _containers()
+        return templates.TemplateResponse(request, "services.html", {"containers": cs, "error": err})
+
+    @app.get("/ui/uptime", include_in_schema=False)
+    def ui_uptime(request: Request):
+        return templates.TemplateResponse(request, "uptime.html", {"rows": _targets()})
 
     return app

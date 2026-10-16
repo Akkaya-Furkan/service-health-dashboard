@@ -13,6 +13,7 @@ dependencies = [
     "httpx>=0.27",
     "prometheus_client>=0.20",
     "docker>=7.0",
+    "jinja2>=3.1",
 ]
 
 [project.optional-dependencies]
@@ -26,3 +27,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+shd = ["templates/*.html", "static/*"]

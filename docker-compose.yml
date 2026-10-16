@@ -28,9 +28,10 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - shd-data:/data
-    networks: [internal, default]
+    networks: [internal, public]
 
 networks:
+  public: {}
   internal:
     internal: true
 

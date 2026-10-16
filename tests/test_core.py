@@ -167,3 +167,47 @@ def test_synthetic_deterministic():
     t = DEMO_TARGETS[0]
     assert synthetic_result(t, 12345) == synthetic_result(t, 12345)
     assert DemoSource().list_containers()
+
+
+# --- frontend
+from shd.ui import fmt_bytes, spark_points, uptime_bar
+
+
+def test_ui_helpers():
+    assert fmt_bytes(None) == "–" and fmt_bytes(1536) == "1.5 KiB" and fmt_bytes(5) == "5 B"
+    h = [res(0, ms=10), res(10, ms=30), res(20, ok=False, ms=None)]
+    assert len(spark_points(h).split()) == 2  # failed check excluded
+    assert spark_points(h[:1]) == ""
+    bar = uptime_bar(h, buckets=3)
+    assert bar == ["up", "up", "down"] and uptime_bar([], 4) == ["none"] * 4
+
+
+def test_ui_pages_demo():
+    with client_for(Settings(demo=True)) as c:
+        page = c.get("/")
+        assert page.status_code == 200 and "DEMO" in page.text and "htmx.min.js" in page.text
+        assert c.get("/static/htmx.min.js").status_code == 200
+        sv = c.get("/ui/services").text
+        assert "nextcloud" in sv and "Exited" in sv and "<meter" in sv
+        up = c.get("/ui/uptime").text
+        assert "pihole" in up and "polyline" in up and "% up" in up
+
+
+def test_ui_empty_and_error_states():
+    class Boom(StaticSource):
+        def list_containers(self):
+            raise RuntimeError("proxy down")
+    with client_for(Settings(db_path=":memory:"), source=Boom([])) as c:
+        assert "container source unavailable" in c.get("/ui/services").text
+        assert "No HTTP targets configured" in c.get("/ui/uptime").text
+    with client_for(Settings(db_path=":memory:"), source=StaticSource([])) as c:
+        assert "No containers reported" in c.get("/ui/services").text
+
+
+def test_docker_source_lazy_no_connect_at_startup():
+    # constructing must not touch the network (conftest fails any connect)
+    src = DockerProxySource("tcp://127.0.0.1:1")
+    with pytest.raises(Exception):
+        src.list_containers()
+    with pytest.raises(ValueError):
+        DockerProxySource("unix:///var/run/docker.sock")

@@ -2,7 +2,11 @@
 
 **Question.** A small, read-only dashboard for container status, resource use and HTTP uptime.
 
-Status: **backend v0.1.0**. The HTMX frontend is the next task. Nothing here has been connected to a real homelab.
+Status: **v0.1.0** (backend + HTMX frontend). Nothing here has been connected to a real homelab.
+
+![desktop](docs/screenshots/desktop-demo.jpg)
+
+Mobile and error/empty states: [mobile](docs/screenshots/mobile-demo.jpg), [error + empty](docs/screenshots/error-empty-state.jpg).
 
 ## What exists
 - FastAPI backend (`src/shd/`)
@@ -10,6 +14,7 @@ Status: **backend v0.1.0**. The HTMX frontend is the next task. Nothing here has
   - `GET /api/services` — containers with state, CPU %, memory
   - `GET /api/uptime?hours=24&limit=200` — per-target last result, uptime %, response-time stats, history
   - `GET /metrics` — Prometheus text format (`shd_target_up`, `shd_target_response_ms`, `shd_container_*`)
+- Frontend: server-rendered Jinja2 page at `/` with htmx (vendored `static/htmx.min.js` 2.0.4, no CDN). Container cards (state, CPU, memory) poll `/ui/services` every 10 s; uptime cards (24 h status bar, response-time line, uptime %, avg/last ms) poll `/ui/uptime` every 15 s. Empty and error states are rendered.
 - Checker: configurable HTTP targets, periodic async checks, results in SQLite (WAL; `(target, checked_at)` is the primary key, so duplicates are ignored).
 - Docker access only through a **read-only docker-socket-proxy** over TCP. The `ContainerSource` interface only offers `list_containers()`; `unix://` hosts are refused by config validation.
 - **Demo mode** (`--demo` / `SHD_DEMO=1`): synthetic containers and 24 h of synthetic uptime history; no Docker, no sockets, no outbound HTTP.
@@ -44,12 +49,21 @@ Offline: a fake Docker client, `httpx.MockTransport`, and a fixture that fails o
 ## Limitations
 - CPU % uses the `docker stats` formula from a single sample; stats are best-effort and absent for stopped containers.
 - No auth on the API; keep it on localhost or a trusted network.
-- `docker-compose.yml` is written but **not run** (no Docker used in development); the Dockerfile is likewise unbuilt.
+- Compose was checked with podman-compose (`config` OK) and the `shd` service was built and run once in demo mode with `--no-deps` (no proxy, no socket); `/health` and `/ui/services` answered. The proxy service and a real socket were never started.
 - History is not pruned yet.
 
+## Deploy guide (not performed by this repo)
+1. On the Docker host: `git clone` the repo, `cp .env.example .env`, set `SHD_TARGETS` (e.g. `web=http://web:80,api=http://api:8080/health`) and keep `SHD_DEMO=0`.
+2. The compose file starts `tecnativa/docker-socket-proxy` with only `CONTAINERS=1`; every other API group and all POST methods are off. It mounts `/var/run/docker.sock:ro` and sits on an `internal: true` network with no route out. The app reaches it via `SHD_DOCKER_HOST=tcp://docker-socket-proxy:2375`; never publish port 2375.
+3. `docker compose up -d --build`. The app listens on `127.0.0.1:8000` only; SQLite lives in the `shd-data` volume.
+4. To expose it, put a reverse proxy in front (Caddy/nginx/Traefik) with TLS and authentication, since the app has none. Targets on other compose networks must be reachable from the `public` network (attach `shd` to them).
+5. Check: `curl localhost:8000/health`, then `/api/services` should list real containers; Prometheus can scrape `/metrics`.
+
+## v0.1.0
+Backend (health, services, uptime, metrics, SQLite checker, socket-proxy client, demo mode) plus the HTMX frontend, compose file and Dockerfile. Tagged locally as `v0.1.0`; no GitHub release has been published.
+
 ## Next steps
-1. HTMX frontend (service cards, uptime lines), screenshots.
-2. **Connecting to the real homelab is a separate decision by the owner and has not been done.** It means pointing `SHD_DOCKER_HOST` at a proxy on the actual Docker host and listing real `SHD_TARGETS`.
-3. Retention/pruning, v0.1.0 release.
+1. **Connecting to the real homelab is a separate decision by the owner and has not been done.** It means pointing `SHD_DOCKER_HOST` at a proxy on the actual Docker host and listing real `SHD_TARGETS`.
+2. Retention/pruning, API auth, publishing the GitHub release.
 
 Part of a 30-project computational biology and scientific software portfolio.

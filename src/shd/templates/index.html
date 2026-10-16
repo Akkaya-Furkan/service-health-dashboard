@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service health</title>
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/htmx.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>Service health</h1>
+  <span class="meta">v{{ version }}{% if demo %} · <b class="badge">DEMO – synthetic data</b>{% endif %} · read-only</span>
+</header>
+<main>
+  <section>
+    <h2>Containers</h2>
+    <div id="services" class="grid" hx-get="/ui/services" hx-trigger="load, every 10s" hx-swap="innerHTML">
+      <p class="empty">Loading…</p>
+    </div>
+  </section>
+  <section>
+    <h2>HTTP uptime (24 h)</h2>
+    <div id="uptime" class="grid" hx-get="/ui/uptime" hx-trigger="load, every 15s" hx-swap="innerHTML">
+      <p class="empty">Loading…</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>

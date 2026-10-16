@@ -43,15 +43,22 @@ class DockerProxySource(ContainerSource):
     """Talks to a docker-socket-proxy over TCP. Refuses unix sockets."""
 
     def __init__(self, base_url: str, timeout: float = 5.0, client=None):
-        if client is None:
+        self._base_url = validate_docker_host(base_url)
+        self._timeout = timeout
+        self._client = client
+
+    def _get_client(self):
+        # Created lazily: docker.DockerClient contacts the daemon on construction,
+        # which would crash startup when the proxy is down.
+        if self._client is None:
             import docker
 
-            client = docker.DockerClient(base_url=validate_docker_host(base_url), timeout=timeout)
-        self._client = client
+            self._client = docker.DockerClient(base_url=self._base_url, timeout=self._timeout)
+        return self._client
 
     def list_containers(self) -> list[ContainerInfo]:
         out = []
-        for c in self._client.containers.list(all=True):
+        for c in self._get_client().containers.list(all=True):
             cpu = mem = limit = None
             if c.status == "running":
                 try:
