@@ -100,8 +100,12 @@ def test_stats_math():
 class FakeContainer:
     def __init__(self, name, status):
         self.short_id, self.name, self.status = name[:4], name, status
-        self.attrs = {"Status": "Up 1 hour"}
-        self.image = type("I", (), {"tags": [f"{name}:1"]})()
+        self.attrs = {"Status": "Up 1 hour", "Config": {"Image": f"{name}:1"}}
+
+    @property
+    def image(self):
+        # The real SDK would call GET /images/<id>; the read-only proxy blocks that (403).
+        raise AssertionError("DockerProxySource must not touch Container.image")
 
     def stats(self, stream=False):
         assert stream is False
@@ -119,6 +123,7 @@ def test_docker_source_with_fake_client():
     assert [c.name for c in cs] == ["web", "job"]
     assert cs[0].cpu_percent == 10.0 and cs[0].memory_bytes == 100
     assert cs[1].cpu_percent is None
+    assert [c.image for c in cs] == ["web:1", "job:1"]
 
 
 # --- API

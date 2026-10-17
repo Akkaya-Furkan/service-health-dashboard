@@ -67,9 +67,12 @@ class DockerProxySource(ContainerSource):
                     mem, limit = memory_usage(st)
                 except Exception:  # stats are best-effort
                     pass
-            tags = c.image.tags if c.image is not None else []
+            # Image name comes from the container inspect that list() already did. `c.image`
+            # would call GET /images/<id>, which the read-only socket proxy (IMAGES=0) blocks.
+            attrs = getattr(c, "attrs", {}) or {}
+            image = (attrs.get("Config") or {}).get("Image") or attrs.get("Image") or "?"
             out.append(ContainerInfo(
-                id=c.short_id, name=c.name, image=tags[0] if tags else "?",
+                id=c.short_id, name=c.name, image=image,
                 state=c.status, status=c.attrs.get("Status", c.status) if hasattr(c, "attrs") else c.status,
                 cpu_percent=cpu, memory_bytes=mem, memory_limit_bytes=limit,
             ))
