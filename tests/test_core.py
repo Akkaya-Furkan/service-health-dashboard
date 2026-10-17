@@ -126,6 +126,22 @@ def test_docker_source_with_fake_client():
     assert [c.image for c in cs] == ["web:1", "job:1"]
 
 
+def test_docker_source_caches_and_samples_in_parallel():
+    calls = []
+
+    class CountingClient:
+        containers = type("C", (), {"list": staticmethod(
+            lambda all=False: calls.append(1) or [FakeContainer(f"c{i}", "running") for i in range(5)])})()
+
+    src = DockerProxySource("tcp://x:1", client=CountingClient(), cache_seconds=60)
+    first, second = src.list_containers(), src.list_containers()
+    assert len(calls) == 1 and [c.name for c in first] == [c.name for c in second]
+    assert all(c.cpu_percent == 10.0 for c in first)
+    fresh = DockerProxySource("tcp://x:1", client=CountingClient(), cache_seconds=0)
+    fresh.list_containers(); fresh.list_containers()
+    assert len(calls) == 3
+
+
 # --- API
 def client_for(settings, **kw):
     return TestClient(create_app(settings, start_checker=False, **kw))
