@@ -25,6 +25,7 @@ services:
       SHD_INTERVAL: 30
       SHD_RETENTION_DAYS: ${SHD_RETENTION_DAYS:-30}
       SHD_DEMO: ${SHD_DEMO:-0}
+      SHD_API_TOKEN: ${SHD_API_TOKEN:-}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:

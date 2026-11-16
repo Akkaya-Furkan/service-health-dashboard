@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import secrets
 import time
 from contextlib import asynccontextmanager
 
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -58,6 +60,22 @@ def create_app(settings: Settings, source: ContainerSource | None = None,
 
     app = FastAPI(title="Service health dashboard", version=__version__, lifespan=lifespan)
     app.state.store, app.state.checker, app.state.metrics = store, checker, metrics
+
+    api_token = settings.api_token.encode("utf-8") if settings.api_token else None
+
+    @app.middleware("http")
+    async def api_auth(request: Request, call_next):
+        path = request.url.path
+        protected = path == "/api" or path.startswith("/api/") or path.rstrip("/") == "/metrics"
+        if api_token is not None and protected:
+            scheme, _, token = request.headers.get("Authorization", "").partition(" ")
+            if scheme.lower() != "bearer" or not secrets.compare_digest(token.encode("utf-8"), api_token):
+                return JSONResponse(
+                    {"detail": "Invalid or missing bearer token"},
+                    status_code=401,
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        return await call_next(request)
 
     @app.get("/health")
     def health():

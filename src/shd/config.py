@@ -17,6 +17,7 @@ class Settings:
     docker_host: str | None = None  # tcp://docker-socket-proxy:2375
     targets: list[Target] = field(default_factory=list)
     retention_days: int = 30
+    api_token: str | None = field(default=None, repr=False)
 
     def __post_init__(self):
         if self.retention_days < 0:
@@ -64,6 +65,7 @@ def load_settings(env: dict | None = None) -> Settings:
         interval_s=float(env.get("SHD_INTERVAL", "30")),
         timeout_s=float(env.get("SHD_TIMEOUT", "5")),
         retention_days=int(env.get("SHD_RETENTION_DAYS", "30")),
+        api_token=env.get("SHD_API_TOKEN") or None,
     )
     s.targets = parse_targets(env.get("SHD_TARGETS", ""))
     host = env.get("SHD_DOCKER_HOST")
