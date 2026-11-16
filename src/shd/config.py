@@ -16,6 +16,11 @@ class Settings:
     timeout_s: float = 5.0
     docker_host: str | None = None  # tcp://docker-socket-proxy:2375
     targets: list[Target] = field(default_factory=list)
+    retention_days: int = 30
+
+    def __post_init__(self):
+        if self.retention_days < 0:
+            raise ValueError("SHD_RETENTION_DAYS must be non-negative (0 disables pruning)")
 
 
 def parse_targets(spec: str) -> list[Target]:
@@ -58,6 +63,7 @@ def load_settings(env: dict | None = None) -> Settings:
         db_path=env.get("SHD_DB", "data/shd.sqlite"),
         interval_s=float(env.get("SHD_INTERVAL", "30")),
         timeout_s=float(env.get("SHD_TIMEOUT", "5")),
+        retention_days=int(env.get("SHD_RETENTION_DAYS", "30")),
     )
     s.targets = parse_targets(env.get("SHD_TARGETS", ""))
     host = env.get("SHD_DOCKER_HOST")

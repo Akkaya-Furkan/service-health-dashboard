@@ -84,6 +84,13 @@ class Store:
         with self._lock:
             return self._conn.execute("SELECT COUNT(*) FROM checks").fetchone()[0]
 
+    def prune_before(self, cutoff: int) -> int:
+        """Delete checks strictly older than cutoff (Unix seconds); return rows deleted."""
+        with self._lock, self._conn:
+            return self._conn.execute(
+                "DELETE FROM checks WHERE checked_at < ?", (cutoff,),
+            ).rowcount
+
     def close(self) -> None:
         self._conn.close()
 

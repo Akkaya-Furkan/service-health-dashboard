@@ -39,6 +39,11 @@ A captured run is in [demo_verification.txt](demo_verification.txt).
 | `SHD_DOCKER_HOST` | unset | `tcp://docker-socket-proxy:2375` (must be tcp/http) |
 | `SHD_DB` | `data/shd.sqlite` | SQLite path |
 | `SHD_INTERVAL` / `SHD_TIMEOUT` | `30` / `5` | seconds |
+| `SHD_RETENTION_DAYS` | `30` | non-negative integer days of check history to keep; `0` disables pruning |
+
+Checks older than the retention window are deleted once at startup and then by the
+checker loop at most once per hour. Checks exactly at the cutoff are kept. Deleted
+SQLite pages can be reused; pruning does not shrink the database file.
 
 ## Tests
 ```bash
@@ -50,7 +55,6 @@ Offline: a fake Docker client, `httpx.MockTransport`, and a fixture that fails o
 - CPU % uses the `docker stats` formula from a single sample; stats are best-effort and absent for stopped containers.
 - No auth on the API; keep it on localhost or a trusted network.
 - Compose was checked with podman-compose (`config` OK) and the `shd` service was built and run once in demo mode with `--no-deps` (no proxy, no socket); `/health` and `/ui/services` answered. The proxy service and a real socket were never started.
-- History is not pruned yet.
 
 ## Deploy guide (not performed by this repo)
 1. On the Docker host: `git clone` the repo, `cp .env.example .env`, set `SHD_TARGETS` (e.g. `web=http://web:80,api=http://api:8080/health`) and keep `SHD_DEMO=0`.
@@ -60,10 +64,10 @@ Offline: a fake Docker client, `httpx.MockTransport`, and a fixture that fails o
 5. Check: `curl localhost:8000/health`, then `/api/services` should list real containers; Prometheus can scrape `/metrics`.
 
 ## v0.1.0
-Backend (health, services, uptime, metrics, SQLite checker, socket-proxy client, demo mode) plus the HTMX frontend, compose file and Dockerfile. Tagged locally as `v0.1.0`; no GitHub release has been published.
+Backend (health, services, uptime, metrics, SQLite checker, socket-proxy client, demo mode) plus the HTMX frontend, compose file and Dockerfile. The `v0.1.0` GitHub release was published on 2026-10-17.
 
 ## Next steps
 1. **Connecting to the real homelab is a separate decision by the owner and has not been done.** It means pointing `SHD_DOCKER_HOST` at a proxy on the actual Docker host and listing real `SHD_TARGETS`.
-2. Retention/pruning, API auth, publishing the GitHub release.
+2. **API authentication is a separate owner decision.** The API currently has no auth; the owner must choose the authentication approach before exposing it beyond a trusted network.
 
 Part of a 30-project computational biology and scientific software portfolio.

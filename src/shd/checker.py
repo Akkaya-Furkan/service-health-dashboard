@@ -30,7 +30,8 @@ class Checker:
 
     def __init__(self, targets, store, interval_s=30.0, timeout_s=5.0,
                  probe: Callable[[Target], CheckResult] | None = None,
-                 transport: httpx.AsyncBaseTransport | None = None, on_result=None):
+                 transport: httpx.AsyncBaseTransport | None = None, on_result=None,
+                 retention_days: int = 30):
         self.targets = list(targets)
         self.store = store
         self.interval_s = interval_s
@@ -38,7 +39,20 @@ class Checker:
         self.probe = probe
         self.transport = transport
         self.on_result = on_result
+        self.retention_days = retention_days
+        self._last_prune: float | None = None
         self._task: asyncio.Task | None = None
+
+    def prune_if_due(self) -> int:
+        """Prune at startup, then attempt at most once per hour, even after failure."""
+        if self.retention_days == 0:
+            return 0
+        now = time.monotonic()
+        if self._last_prune is not None and now - self._last_prune < 3600:
+            return 0
+        self._last_prune = now
+        cutoff = int(time.time()) - self.retention_days * 86400
+        return self.store.prune_before(cutoff)
 
     async def run_once(self) -> list[CheckResult]:
         if self.probe is not None:
@@ -55,6 +69,10 @@ class Checker:
 
     async def _loop(self):
         while True:
+            try:
+                self.prune_if_due()
+            except Exception:
+                log.exception("retention pruning failed")
             try:
                 await self.run_once()
             except Exception:

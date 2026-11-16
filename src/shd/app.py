@@ -41,12 +41,14 @@ def create_app(settings: Settings, source: ContainerSource | None = None,
     store = Store(db)
     metrics = Metrics(source)
     checker = Checker(targets, store, settings.interval_s, settings.timeout_s,
-                      probe=probe, transport=transport, on_result=metrics.record)
+                      probe=probe, transport=transport, on_result=metrics.record,
+                      retention_days=settings.retention_days)
 
     @asynccontextmanager
     async def lifespan(app):
         if settings.demo:
             backfill(store, targets)
+        checker.prune_if_due()
         await checker.run_once()
         if start_checker:
             checker.start()
